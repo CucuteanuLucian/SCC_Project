@@ -1,0 +1,29 @@
+# OS Process Scheduling Simulator - Input File
+
+# System Configuration
+# processors: Number of CPUs available
+# ram: Total RAM size in units
+# timeslice: Time slice for Round-Robin (quantum)
+# system_period: System process release interval
+# disk_rate: Disk transfer rate (units per time unit)
+
+processors=2
+ram=512
+timeslice=4
+system_period=10
+disk_rate=100
+
+# Process Definitions
+# Format: ProcessID ReleaseTime MemoryRequired (Burst1 Burst2 ...)
+# 
+# Bursts alternate between CPU and System calls:
+#   Even indices (0,2,4,...) = CPU bursts
+#   Odd indices (1,3,5,...) = System call durations
+#
+# Example: (5 2 3 4 9 4 6)
+#   -> CPU 5 units -> SYS 2 units -> CPU 3 units -> SYS 4 units -> CPU 9 units -> SYS 4 units -> CPU 6 units
+
+P1 0 256 (5 2 3 4 9 4 6)
+P2 2 128 (4 3 6 2 5)
+P3 1 192 (7 2 8 3 4)
+P4 3 64 (3 1 4 2 5 1 3)
