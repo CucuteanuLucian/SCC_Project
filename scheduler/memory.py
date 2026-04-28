@@ -24,10 +24,20 @@ class MemoryManager:
     def evict_lru(self):
         """Evict the LRU process from RAM. Returns the evicted process."""
         assert self._in_memory, "Nothing left to evict!"
-        victim = self._in_memory.pop(0)
-        victim.in_memory = False
-        self.used_ram -= victim.memory_required
-        return victim
+
+        # Iterate from oldest (index 0) to newest
+        for i, process in enumerate(self._in_memory):
+            # Only evict processes that aren't actively doing something critical
+            # (Adjust these state strings to match your exact process model)
+            if process.state not in ["RUNNING", "SYSCALL", "WAITING_MEM"]:
+                victim = self._in_memory.pop(i)
+                victim.in_memory = False
+                self.used_ram -= victim.memory_required
+                return victim
+
+        # If the loop finishes without returning, you have a major problem!
+        # E.g., a process requires more RAM than exists, or all RAM is held by running procs.
+        raise RuntimeError("Out of Memory: No safe processes available to evict.")
 
     def complete_load(self, process):
         """Called when disk transfer finishes - marks process as in RAM."""
