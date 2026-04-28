@@ -1,0 +1,25 @@
+# Simulation parameters
+PROCESSORS 2
+MEMORY 100
+TIME_SLICE 3
+SYSCALL_PERIOD 10
+DISK_TRANSFER_RATE 10
+
+# Process definitions
+# PROCESS <pid> <release_time> <memory_required>
+# BURSTS <count> b0 [s0 b1 s1 ... bn-1]
+#
+# Example from requirements: sequence (5 2 3 4 9 4 6)
+# => 4 bursts of length 5,3,9,6 separated by 3 syscalls of length 2,4,4
+
+PROCESS 1 0 40
+BURSTS 4 5 2 3 4 9 4 6
+
+PROCESS 2 2 30
+BURSTS 3 4 3 7 2 5
+
+PROCESS 3 5 60
+BURSTS 2 8 1 4
+
+PROCESS 4 0 50
+BURSTS 1 10
