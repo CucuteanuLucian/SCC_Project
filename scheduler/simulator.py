@@ -88,78 +88,103 @@ class Simulator:
         Sets _disk_busy = True and pushes a MEM_READY event.
         `process` must not be in_memory already.
         """
-        assert not self._disk_busy
+        """Attempts to load a process. Returns True if successful, False if OOM."""
+        # Calculate how much we need to evict
+        needed = (self.mem.used_ram + process.memory_required) - self.mem.total_ram
+
+        if needed > 0:
+            # Check if we even have enough 'evictable' memory
+            # (Oldest to newest, non-busy processes)
+            evictable_mem = sum(p.memory_required for p in self.mem._in_memory
+                                if p.state not in ["RUNNING", "SYSCALL", "WAITING_MEM"])
+
+            if evictable_mem < needed:
+                return False  # Not enough safe space right now!
+
+        # If we get here, we have enough space (or can make it)
         self._disk_busy = True
         elapsed = self.current_time
 
-        # evict until there is enough free RAM
         while self.mem.used_ram + process.memory_required > self.mem.total_ram:
             victim = self.mem.evict_lru()
             save_time = victim.memory_required / self.mem.disk_transfer_rate
             self.event_log.append({
-                "time": elapsed,
-                "end_time": elapsed + save_time,
-                "type": "SWAP_OUT",
-                "pid": victim.pid,
-                "duration": save_time,
+                "time": elapsed, "end_time": elapsed + save_time,
+                "type": "SWAP_OUT", "pid": victim.pid, "duration": save_time,
             })
             elapsed += save_time
 
-        # load the process
         load_time = process.memory_required / self.mem.disk_transfer_rate
         self.event_log.append({
-            "time": elapsed,
-            "end_time": elapsed + load_time,
-            "type": "SWAP_IN",
-            "pid": process.pid,
-            "duration": load_time,
+            "time": elapsed, "end_time": elapsed + load_time,
+            "type": "SWAP_IN", "pid": process.pid, "duration": load_time,
         })
         elapsed += load_time
 
         process.state = "WAITING_MEM"
         self._push(elapsed, "MEM_READY", process)
+        return True
 
     # ------------------------------------------------------------------
     # user-process scheduling
     # ------------------------------------------------------------------
 
     def _schedule(self):
-        """Assign READY user processes to free processors."""
+        """
+        Assign READY user processes to free processors.
+        Handles virtual memory loading and processor affinity.
+        """
+        # We continue as long as there are processes to run and CPUs to run them on
         while self.ready_queue and self._free_processors():
-            # peek at the first process
-            process = self.ready_queue[0]
+            # 1. Get the next process in line
+            process = self.ready_queue.pop(0)
 
+            # Safety check: if the process isn't READY (e.g. still in SYSCALL), skip it
             if process.state != "READY":
-                self.ready_queue.pop(0)
                 continue
 
-            if not self._free_processors():
-                break
-
-            # if not in memory, start a disk load (only one at a time)
+            # 2. Virtual Memory Management
             if not process.in_memory:
+                # If the disk is already moving another process, we must wait
                 if self._disk_busy:
-                    break   # wait until current transfer finishes
-                self.ready_queue.pop(0)
-                self._start_load(process)
-                break       # disk is now busy; only one load at a time
+                    self.ready_queue.insert(0, process)
+                    break
 
-            # process is in memory and a CPU is free
-            self.ready_queue.pop(0)
-            free = self._free_processors()
-            processor = free[0]
-            for p in free:
+                # Attempt to load the process from disk.
+                # If _start_load returns False, it means RAM is full of busy processes.
+                # We stop scheduling and wait for a CPU_DONE or SYSCALL_DONE event.
+                if self._start_load(process):
+                    # Load started successfully; disk is now busy.
+                    # We break because only one load can happen at a time.
+                    break
+                else:
+                    # OOM: No safe victims to evict right now.
+                    self.ready_queue.insert(0, process)
+                    break
+
+            # 3. Processor Affinity
+            # If we are here, the process is in RAM. Now find a CPU.
+            free_cpus = self._free_processors()
+            processor = free_cpus[0] # Default to the first available
+
+            # Check if the CPU it was last on is currently free
+            for p in free_cpus:
                 if p.proc_id == process.last_processor:
                     processor = p
                     break
 
+            # 4. Execute the Process (Round-Robin)
             run_time = min(self.time_slice, process.burst_remaining)
+
+            # Update States
             process.state = "RUNNING"
             process.last_processor = processor.proc_id
-            self.mem.touch(process)
+            self.mem.touch(process) # Update LRU position
+
             processor.current_process = process
             processor.busy_until = self.current_time + run_time
 
+            # 5. Logging and Event Queue
             self.event_log.append({
                 "time": self.current_time,
                 "end_time": self.current_time + run_time,
@@ -168,6 +193,8 @@ class Simulator:
                 "processor": processor.proc_id,
                 "duration": run_time,
             })
+
+            # Schedule the event for when the CPU burst/slice finishes
             self._push(self.current_time + run_time, "CPU_DONE", (process, processor))
 
     # ------------------------------------------------------------------
@@ -226,8 +253,10 @@ class Simulator:
                 self.event_log.append({
                     "time": t, "end_time": t, "type": "SYS_RELEASE",
                 })
-                if self.sys_proc.state == "IDLE":
+                if self.sys_proc.pending_syscalls:
                     self.sys_proc.state = "WAITING"
+                else:
+                    self.sys_proc.state = "IDLE"
                 self.sys_proc.next_release = t + self.sys_proc.period
                 self._push(self.sys_proc.next_release, "SYS_RELEASE")
 
@@ -243,7 +272,12 @@ class Simulator:
                     "time": t, "end_time": t,
                     "type": "SYSCALL_DONE", "pid": proc.pid,
                 })
-                self.sys_proc.state = "WAITING" if self.sys_proc.pending_syscalls else "IDLE"
+
+                # If there are more calls waiting, keep processing; otherwise, wait for next period
+                if self.sys_proc.pending_syscalls:
+                    self.sys_proc.state = "WAITING"
+                else:
+                    self.sys_proc.state = "IDLE"
 
             # ---- memory transfer complete ----
             elif etype == "MEM_READY":
