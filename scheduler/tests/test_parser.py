@@ -77,6 +77,28 @@ BURSTS 1 3
         finally:
             os.remove(path)
 
+    def test_empty_file_raises(self):
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".txt") as fh:
+            fh.write("")
+            path = fh.name
+
+        try:
+            with self.assertRaises(AssertionError):
+                parse_file(path)
+        finally:
+            os.remove(path)
+
+    def test_garbage_file_raises(self):
+        content = "BLAH BLAH\nFOO BAR\n"
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".txt") as fh:
+            fh.write(content)
+            path = fh.name
+
+        try:
+            with self.assertRaises(AssertionError):
+                parse_file(path)
+        finally:
+            os.remove(path)
 
 if __name__ == "__main__":
     unittest.main()

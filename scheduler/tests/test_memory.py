@@ -50,6 +50,20 @@ class TestMemoryManager(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             self.manager.evict_lru()
 
+    def test_complete_load_same_process_twice_doubles_ram(self):
+        process = Process(1, 0.0, 3.0, [1.0], [])
+        self.manager.complete_load(process)
+        self.manager.complete_load(process)
+
+        self.assertEqual(self.manager.used_ram, 6.0)
+        self.assertEqual(self.manager._in_memory.count(process), 2)
+
+    def test_touch_process_not_in_memory_is_noop(self):
+        process = Process(1, 0.0, 2.0, [1.0], [])
+        self.manager.touch(process)
+
+        self.assertEqual(self.manager._in_memory, [])
+
 
 if __name__ == "__main__":
     unittest.main()

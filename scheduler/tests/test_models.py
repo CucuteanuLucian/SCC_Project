@@ -25,6 +25,11 @@ class TestProcess(unittest.TestCase):
         process = Process(3, 0.0, 1.0, [1.0], [])
         self.assertIn("Process(pid=3", repr(process))
 
+    def test_process_with_empty_bursts(self):
+        process = Process(1, 0.0, 2.0, [], [])
+        self.assertEqual(process.burst_remaining, 0)
+        self.assertEqual(process.bursts, [])
+
 
 class TestProcessor(unittest.TestCase):
     def test_is_free_when_idle(self):
