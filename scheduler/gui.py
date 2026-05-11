@@ -28,7 +28,8 @@ def show_gantt(event_log, processors_count):
 
     # full canvas dimensions (may be larger than the screen)
     canvas_w = int(end_time * TIME_SCALE) + PADDING * 2 + 60
-    canvas_h = processors_count * ROW_HEIGHT + HEADER_H + PADDING * 2
+    # add one extra row for system/memory/instant events
+    canvas_h = (processors_count + 1) * ROW_HEIGHT + HEADER_H + PADDING * 2
 
     # window size capped to 90% of screen
     root = tk.Tk()
@@ -69,6 +70,15 @@ def show_gantt(event_log, processors_count):
     root.bind("<Button-4>", lambda e: canvas.xview_scroll(-1, "units"))
     root.bind("<Button-5>", lambda e: canvas.xview_scroll(1, "units"))
 
+    # draw top row for system/memory/instant events
+    top_y = HEADER_H - ROW_HEIGHT
+    canvas.create_text(PADDING, top_y + ROW_HEIGHT // 2,
+                       text="SYS/MEM", anchor="w", font=("Courier", 10, "bold"))
+    canvas.create_rectangle(
+        50, top_y, 50 + int(end_time * TIME_SCALE), top_y + ROW_HEIGHT,
+        fill=IDLE_COLOR, outline="#cccccc"
+    )
+
     # draw processor labels and idle background
     for i in range(processors_count):
         y = HEADER_H + i * ROW_HEIGHT
@@ -89,18 +99,70 @@ def show_gantt(event_log, processors_count):
     pid_color = {}
     color_idx = 0
 
-    for e in event_log:
-        etype = e.get("type")
-        if etype not in ("RUN", "SYS_RUN", "SWAP_IN", "SWAP_OUT"):
-            continue
+    # helper for tooltips (floating window, not on canvas)
+    tooltip_window = {"win": None}
 
-        proc_id = e.get("processor", 0)
+    def _show_tooltip(ev, text):
+        # remove existing tooltip
+        if tooltip_window["win"]:
+            tooltip_window["win"].destroy()
+            tooltip_window["win"] = None
+        
+        # create a floating toplevel window
+        tw = tk.Toplevel(root)
+        tw.wm_overrideredirect(True)
+        
+        # create label with text
+        label = tk.Label(tw, text=text, background="#ffffe0", relief=tk.SOLID, 
+                        borderwidth=1, font=("Courier", 8), justify=tk.LEFT)
+        label.pack()
+        
+        # position window near mouse in window coordinates
+        x = root.winfo_x() + ev.x + 15
+        y = root.winfo_y() + ev.y + 15
+        
+        # clamp to screen to keep visible
+        screen_w = root.winfo_screenwidth()
+        screen_h = root.winfo_screenheight()
+        req_w = label.winfo_reqwidth()
+        req_h = label.winfo_reqheight()
+        
+        if x + req_w > screen_w:
+            x = max(0, root.winfo_x() + ev.x - req_w - 5)
+        if y + req_h > screen_h:
+            y = max(0, root.winfo_y() + ev.y - req_h - 5)
+        
+        tw.wm_geometry(f"+{x}+{y}")
+        tooltip_window["win"] = tw
+
+    def _hide_tooltip(ev=None):
+        if tooltip_window["win"]:
+            tooltip_window["win"].destroy()
+            tooltip_window["win"] = None
+
+    for idx, e in enumerate(event_log):
+        etype = e.get("type")
+        # draw all event types; position by processor if present, else top row
+        proc_field = e.get("processor")
+        if proc_field is None:
+            proc_row = -1
+        else:
+            proc_row = int(proc_field)
+
         t_start = e.get("time", 0)
         t_end = e.get("end_time", t_start)
         x0 = 50 + int(t_start * TIME_SCALE)
         x1 = 50 + int(t_end * TIME_SCALE)
-        y0 = HEADER_H + proc_id * ROW_HEIGHT + 1
-        y1 = HEADER_H + (proc_id + 1) * ROW_HEIGHT - 1
+
+        if proc_row >= 0:
+            y0 = HEADER_H + proc_row * ROW_HEIGHT + 1
+            y1 = HEADER_H + (proc_row + 1) * ROW_HEIGHT - 1
+        else:
+            y0 = HEADER_H - ROW_HEIGHT + 1
+            y1 = HEADER_H - 1
+
+        label = e.get("type")
+        color = MEM_COLOR
 
         if etype == "RUN":
             pid = e.get("pid")
@@ -112,13 +174,31 @@ def show_gantt(event_log, processors_count):
         elif etype == "SYS_RUN":
             color = SYS_COLOR
             label = f"SYS({e.get('pid')})"
-        else:
+        elif etype in ("SWAP_IN", "SWAP_OUT"):
             color = MEM_COLOR
             label = "MEM"
+        elif etype in ("RELEASE", "MEM_READY", "SYSCALL_QUEUED", "SYSCALL_DONE", "DONE", "SYS_RELEASE", "SIMULATION_END"):
+            color = "#ffffff"
 
-        canvas.create_rectangle(x0, y0, x1, y1, fill=color, outline="#333333")
-        if x1 - x0 > 15:
-            canvas.create_text((x0 + x1) // 2, (y0 + y1) // 2,
-                               text=label, font=("Courier", 8), fill="white")
+        # draw zero-duration events as vertical lines
+        if x1 <= x0 + 2:
+            line_id = canvas.create_line(x0, y0, x0, y1, fill="#333333")
+            text_id = canvas.create_text(x0 + 3, y0 - 6, text=label, anchor="w", font=("Courier", 7))
+            tag = f"evt_{idx}"
+            canvas.addtag_withtag(tag, line_id)
+            canvas.addtag_withtag(tag, text_id)
+            formatted = "\n".join(f"{k}: {v}" for k, v in e.items())
+            canvas.tag_bind(tag, "<Enter>", lambda ev, txt=formatted: _show_tooltip(ev, txt))
+            canvas.tag_bind(tag, "<Leave>", lambda ev: _hide_tooltip(ev))
+        else:
+            rect_id = canvas.create_rectangle(x0, y0, x1, y1, fill=color, outline="#333333")
+            if x1 - x0 > 15:
+                canvas.create_text((x0 + x1) // 2, (y0 + y1) // 2,
+                                   text=label, font=("Courier", 8), fill="white")
+            tag = f"evt_{idx}"
+            canvas.addtag_withtag(tag, rect_id)
+            formatted = "\n".join(f"{k}: {v}" for k, v in e.items())
+            canvas.tag_bind(tag, "<Enter>", lambda ev, txt=formatted: _show_tooltip(ev, txt))
+            canvas.tag_bind(tag, "<Leave>", lambda ev: _hide_tooltip(ev))
 
     root.mainloop()

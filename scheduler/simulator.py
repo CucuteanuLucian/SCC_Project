@@ -30,6 +30,7 @@ class Simulator:
         self._events         = []   # sorted (time, seq, type, data)
         self._seq            = 0
         self._disk_busy      = False
+        self._next_cpu       = 0    # next CPU id to try for round-robin
 
     # ------------------------------------------------------------------
     # event queue
@@ -61,7 +62,19 @@ class Simulator:
         if not free:
             return
 
-        processor = free[0]
+        # pick a free processor using round-robin starting at self._next_cpu
+        free_map = {p.proc_id: p for p in free}
+        n = len(self.processors)
+        processor = None
+        for offset in range(n):
+            pid = (self._next_cpu + offset) % n
+            if pid in free_map:
+                processor = free_map[pid]
+                self._next_cpu = (pid + 1) % n
+                break
+        if processor is None:
+            processor = free[0]
+            self._next_cpu = (processor.proc_id + 1) % n
         proc, syscall_dur = self.sys_proc.pending_syscalls.pop(0)
         self.sys_proc.state = "RUNNING"
         self.sys_proc.assigned_processor = processor
@@ -162,16 +175,30 @@ class Simulator:
                     self.ready_queue.insert(0, process)
                     break
 
-            # 3. Processor Affinity
-            # If we are here, the process is in RAM. Now find a CPU.
+            # 3. Processor selection: prefer affinity, else round-robin
             free_cpus = self._free_processors()
-            processor = free_cpus[0] # Default to the first available
+            free_map = {p.proc_id: p for p in free_cpus}
+            processor = None
 
-            # Check if the CPU it was last on is currently free
-            for p in free_cpus:
-                if p.proc_id == process.last_processor:
-                    processor = p
-                    break
+            # affinity: if this process ran on a processor previously and that
+            # processor is currently free, schedule it there (spec requirement)
+            if process.last_processor is not None and process.last_processor in free_map:
+                processor = free_map[process.last_processor]
+                # advance _next_cpu to avoid repeatedly picking same after affinity
+                n = len(self.processors)
+                self._next_cpu = (processor.proc_id + 1) % n
+            else:
+                # fallback: pick by round-robin to balance across CPUs
+                n = len(self.processors)
+                for offset in range(n):
+                    pid = (self._next_cpu + offset) % n
+                    if pid in free_map:
+                        processor = free_map[pid]
+                        self._next_cpu = (pid + 1) % n
+                        break
+                if processor is None:
+                    processor = free_cpus[0]
+                    self._next_cpu = (processor.proc_id + 1) % n
 
             # 4. Execute the Process (Round-Robin)
             run_time = min(self.time_slice, process.burst_remaining)
