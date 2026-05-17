@@ -17,6 +17,7 @@ Lines starting with '#' are treated as comments and ignored.
 Blank lines are ignored.
 """
 
+import os
 from models import Process
 
 
@@ -30,6 +31,9 @@ def parse_file(path):
                              syscall_period, disk_transfer_rate
     processes: list of Process objects
     """
+    assert isinstance(path, str), "path must be a string"  # precondition
+    assert os.path.exists(path) and os.path.isfile(path), f"Input file not found: {path}"  # precondition
+
     params = {}
     processes = []
 
@@ -75,7 +79,7 @@ def parse_file(path):
 
         elif keyword == "BURSTS":
             # BURSTS <count> b0 [s0 b1 s1 ... b_count-1]
-            assert current_process is not None, "BURSTS line without preceding PROCESS"
+            assert current_process is not None, "BURSTS line without preceding PROCESS"  # precondition
             count = int(tokens[1])
             values = [float(x) for x in tokens[2:]]
             # interleaved: b s b s ... b  => count bursts, count-1 syscalls
@@ -104,9 +108,9 @@ def _validate_params(params):
     required = ["processors", "memory", "time_slice", "syscall_period",
                 "disk_transfer_rate"]
     for key in required:
-        assert key in params, f"Missing simulation parameter: {key}"
-    assert params["processors"] >= 1
-    assert params["memory"] > 0
-    assert params["time_slice"] > 0
-    assert params["syscall_period"] > 0
-    assert params["disk_transfer_rate"] > 0
+        assert key in params, f"Missing simulation parameter: {key}"  # postcondition
+    assert params["processors"] >= 1  # postcondition
+    assert params["memory"] > 0  # postcondition
+    assert params["time_slice"] > 0  # postcondition
+    assert params["syscall_period"] > 0  # postcondition
+    assert params["disk_transfer_rate"] > 0  # postcondition

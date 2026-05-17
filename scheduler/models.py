@@ -13,6 +13,13 @@ class Process:
         syscall_times  : list of system-call durations [s0, s1, ..., sn-1]
                          len(syscall_times) == len(bursts) - 1
         """
+        assert isinstance(pid, int) and pid >= 0, "pid must be a non-negative int"  # precondition
+        assert release_time >= 0, "release_time must be non-negative"  # precondition
+        assert memory_required > 0, "memory_required must be positive"  # precondition
+        assert isinstance(bursts, (list, tuple)), "bursts must be a list or tuple"  # precondition
+        assert isinstance(syscall_times, (list, tuple)), "syscall_times must be a list or tuple"  # precondition
+        assert len(syscall_times) == max(0, len(bursts) - 1), "syscall_times length mismatch"  # precondition
+
         self.pid = pid
         self.release_time = release_time
         self.memory_required = memory_required
@@ -41,6 +48,7 @@ class Processor:
         self.busy_until = 0           # simulation time when it becomes free
 
     def is_free(self, current_time):
+        assert current_time >= 0, "current_time must be non-negative"  # precondition
         return self.current_process is None or current_time >= self.busy_until
 
     def __repr__(self):

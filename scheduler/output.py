@@ -6,6 +6,8 @@ No third-party libraries used.
 
 def write_text_report(event_log, path):
     """Write a human-readable text log of all events."""
+    assert isinstance(event_log, list), "event_log must be a list"  # precondition
+    assert isinstance(path, str) and path, "path must be a non-empty string"  # precondition
     with open(path, "w") as fh:
         fh.write(f"{'TIME':>10}  {'END_TIME':>10}  {'TYPE':<20}  DETAILS\n")
         fh.write("-" * 70 + "\n")
@@ -23,6 +25,10 @@ def write_gantt(event_log, processors_count, path):
     Write a simple ASCII Gantt chart.
     Each row is a processor; columns are integer time units.
     """
+    assert isinstance(event_log, list), "event_log must be a list"  # precondition
+    assert isinstance(processors_count, int) and processors_count > 0, "processors_count must be a positive int"  # precondition
+    assert isinstance(path, str) and path, "path must be a non-empty string"  # precondition
+
     # determine simulation end time
     end_time = 0
     for e in event_log:

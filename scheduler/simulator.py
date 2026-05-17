@@ -31,12 +31,17 @@ class Simulator:
         self._seq            = 0
         self._disk_busy      = False
         self._next_cpu       = 0    # next CPU id to try for round-robin
+        assert self.time_slice > 0, "time_slice must be positive"  # precondition
+        assert len(self.processors) > 0, "there must be at least one processor"  # precondition
+        assert self.mem.total_ram > 0, "memory total must be positive"  # precondition
+        assert isinstance(self.processes, list), "processes must be a list"  # precondition
 
     # ------------------------------------------------------------------
     # event queue
     # ------------------------------------------------------------------
 
     def _push(self, t, etype, data=None):
+        assert isinstance(etype, str), "event type must be a string"  # precondition
         self._events.append((t, self._seq, etype, data))
         self._seq += 1
         self._events.sort(key=lambda e: (e[0], e[1]))
@@ -102,6 +107,8 @@ class Simulator:
         `process` must not be in_memory already.
         """
         """Attempts to load a process. Returns True if successful, False if OOM."""
+        assert not process.in_memory, "process is already in memory"  # precondition
+        assert process.memory_required > 0, "process must request positive memory"  # precondition
         # Calculate how much we need to evict
         needed = (self.mem.used_ram + process.memory_required) - self.mem.total_ram
 
