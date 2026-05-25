@@ -292,7 +292,7 @@ In `test_simulator.py`, a `FakeMemoryManager` class replaces the real `MemoryMan
 | `test_initial_state` | Correct default values on `Process` construction |
 | `test_is_done_flag` | `is_done()` returns `True` only when state is `"DONE"` |
 | `test_repr_contains_pid` | `repr()` includes the process pid |
-| `test_process_with_empty_bursts` | ⚠ Invalid input: `Process` with no bursts defaults `burst_remaining` to `0` |
+| `test_process_with_empty_bursts` | Invalid input: `Process` with no bursts defaults `burst_remaining` to `0` |
 
 **`test_memory.py`** - 6 tests
 
@@ -301,19 +301,19 @@ In `test_simulator.py`, a `FakeMemoryManager` class replaces the real `MemoryMan
 | `test_complete_load_marks_process_in_memory` | `in_memory`, `used_ram`, and `_in_memory` are updated after a load |
 | `test_touch_moves_process_to_mru` | `touch()` moves a process to the MRU end of the list |
 | `test_evict_lru_returns_oldest_nonbusy` | LRU eviction skips busy processes and picks the oldest safe one |
-| `test_evict_lru_raises_when_no_safe_process` | ⚠ Invalid input: `RuntimeError` raised when no process can be evicted |
-| `test_complete_load_same_process_twice_doubles_ram` | ⚠ Invalid input: calling `complete_load` twice on the same object doubles RAM usage |
-| `test_touch_process_not_in_memory_is_noop` | ⚠ Invalid input: `touch()` on an unloaded process is a silent no-op |
+| `test_evict_lru_raises_when_no_safe_process` | Invalid input: `RuntimeError` raised when no process can be evicted |
+| `test_complete_load_same_process_twice_doubles_ram` | Invalid input: calling `complete_load` twice on the same object doubles RAM usage |
+| `test_touch_process_not_in_memory_is_noop` | Invalid input: `touch()` on an unloaded process is a silent no-op |
 
 **`test_parser.py`** - 5 tests
 
 | Test | What is verified |
 |---|---|
 | `test_parse_file_returns_parameters_and_processes` | A valid file produces correct params and `Process` objects |
-| `test_missing_required_parameter_raises` | ⚠ Invalid input: missing `SYSCALL_PERIOD` raises `AssertionError` |
-| `test_bursts_without_process_raises` | ⚠ Invalid input: `BURSTS` before `PROCESS` raises `AssertionError` |
-| `test_empty_file_raises` | ⚠ Invalid input: empty file raises `AssertionError` |
-| `test_garbage_file_raises` | ⚠ Invalid input: unrecognised keywords raise `AssertionError` |
+| `test_missing_required_parameter_raises` | Invalid input: missing `SYSCALL_PERIOD` raises `AssertionError` |
+| `test_bursts_without_process_raises` | Invalid input: `BURSTS` before `PROCESS` raises `AssertionError` |
+| `test_empty_file_raises` | Invalid input: empty file raises `AssertionError` |
+| `test_garbage_file_raises` | Invalid input: unrecognised keywords raise `AssertionError` |
 
 **`test_output.py`** - 2 tests
 
@@ -327,12 +327,10 @@ In `test_simulator.py`, a `FakeMemoryManager` class replaces the real `MemoryMan
 | Test | What is verified |
 |---|---|
 | `test_try_run_syscall_schedules_syscall_if_cpu_free` | System call is dispatched when sys-proc is WAITING and a CPU is free |
-| `test_start_load_returns_false_with_no_safe_evictions` | ⚠ Invalid input: returns `False` when RAM is full with no evictable processes |
+| `test_start_load_returns_false_with_no_safe_evictions` | Invalid input: returns `False` when RAM is full with no evictable processes |
 | `test_start_load_evicts_and_schedules_mem_ready` | Eviction and SWAP_IN are logged; `MEM_READY` is queued at the correct time |
 | `test_schedule_assigns_ready_process_to_free_processor` | A READY process is dispatched to a free CPU |
 | `test_run_completes_process_with_fake_memory_manager` | Full end-to-end run produces a `DONE` event and ends with `SIMULATION_END` |
-
-> ⚠ marks tests that specifically exercise **incorrect or boundary input data**, in line with the unit testing requirement.
 
 ### 5.4 Running the Tests
 
