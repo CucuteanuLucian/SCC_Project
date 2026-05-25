@@ -346,41 +346,77 @@ Expected result: **27 tests, 0 failures**.
 
 ## 6. Use of Assertions
 
-Assertions are inserted directly into the application code (not in the tests) to enforce **preconditions**, **postconditions**, and **invariants** at runtime.
+Assertions are inserted directly into the application code (not in the tests) to enforce **preconditions**, **postconditions**, and **invariants** at runtime. They cause the program to fail immediately and clearly at the point where a contract is violated, rather than producing silent wrong results later in the simulation.
 
-### 6.1 `parser.py`
+### 6.1 `models.py`
 
 | Location | Type | Assertion |
 |---|---|---|
-| `parse_file()` entry | Precondition | `path` must be a non-empty string |
-| `parse_file()` entry | Precondition | File must exist on disk |
+| `Process.__init__` | Precondition | `pid` must be a non-negative integer |
+| `Process.__init__` | Precondition | `release_time` must be non-negative |
+| `Process.__init__` | Precondition | `memory_required` must be positive |
+| `Process.__init__` | Precondition | `bursts` must be a list or tuple |
+| `Process.__init__` | Precondition | `syscall_times` must be a list or tuple |
+| `Process.__init__` | Precondition | `len(syscall_times)` must equal `max(0, len(bursts) - 1)` |
+| `Processor.is_free` | Precondition | `current_time` must be non-negative |
+
+### 6.2 `memory.py`
+
+| Location | Type | Assertion |
+|---|---|---|
+| `MemoryManager.__init__` | Precondition | `total_ram` must be positive |
+| `MemoryManager.__init__` | Precondition | `disk_transfer_rate` must be positive |
+| `touch` | Precondition | `process` must not be `None` |
+| `evict_lru` | Precondition | `_in_memory` must not be empty before eviction is attempted |
+| `evict_lru` | Invariant | `used_ram` must not go negative after an eviction |
+| `complete_load` | Precondition | The process's memory footprint plus current usage must not exceed total RAM |
+
+### 6.3 `simulator.py`
+
+| Location | Type | Assertion |
+|---|---|---|
+| `Simulator.__init__` | Precondition | `time_slice` must be positive |
+| `Simulator.__init__` | Precondition | At least one processor must exist |
+| `Simulator.__init__` | Precondition | Total RAM must be positive |
+| `Simulator.__init__` | Precondition | `processes` must be a list |
+| `_push` | Precondition | Event type must be a string |
+| `_start_load` | Precondition | The process must not already be in memory |
+| `_start_load` | Precondition | The process must request a positive amount of memory |
+
+### 6.4 `parser.py`
+
+| Location | Type | Assertion |
+|---|---|---|
+| `parse_file` entry | Precondition | `path` must be a string |
+| `parse_file` entry | Precondition | The file must exist on disk |
 | `BURSTS` parsing | Precondition | A `PROCESS` line must precede any `BURSTS` line |
-| `_validate_params()` | Postcondition | All five required parameters must be present |
-| `_validate_params()` | Postcondition | `processors` ≥ 1 and `memory` > 0 |
+| `_validate_params` | Postcondition | All five required parameters must be present in the parsed result |
+| `_validate_params` | Postcondition | `processors` ≥ 1 |
+| `_validate_params` | Postcondition | `memory` > 0 |
+| `_validate_params` | Postcondition | `time_slice` > 0 |
+| `_validate_params` | Postcondition | `syscall_period` > 0 |
+| `_validate_params` | Postcondition | `disk_transfer_rate` > 0 |
 
-### 6.2 `output.py`
+### 6.5 `output.py`
 
 | Location | Type | Assertion |
 |---|---|---|
-| `write_text_report()` | Precondition | `event_log` must be a list |
-| `write_text_report()` | Precondition | `path` must be a non-empty string |
-| `write_gantt()` | Precondition | `event_log` must be a list |
-| `write_gantt()` | Precondition | `processors_count` must be a positive integer |
-| `write_gantt()` | Precondition | `path` must be a non-empty string |
+| `write_text_report` | Precondition | `event_log` must be a list |
+| `write_text_report` | Precondition | `path` must be a non-empty string |
+| `write_gantt` | Precondition | `event_log` must be a list |
+| `write_gantt` | Precondition | `processors_count` must be a positive integer |
+| `write_gantt` | Precondition | `path` must be a non-empty string |
 
-### 6.3 Design Rationale
+### 6.6 Design Rationale
 
-Assertions serve as **executable documentation** of the contract each function expects. They allow bugs caused by incorrect inputs (e.g. a wrongly formatted file, a negative processor count) to be detected immediately at the point of failure, rather than producing silent wrong results deeper in the simulation.
+Assertions serve as **executable documentation** of the contract each function expects. They allow bugs caused by incorrect inputs — such as a wrongly formatted file, a negative processor count, or a process being double-loaded into RAM — to be detected immediately at the point of failure. This is especially valuable in a simulation where a silent wrong value could propagate through many events before causing an observable error.
 
 ---
 
 ## 7. Team Contributions
 
-| Team Member | Contributions |
-|---|---|
-| *(name)* | *(describe contribution — e.g. models.py, simulator.py, Phase 1 design)* |
-| *(name)* | *(describe contribution — e.g. memory.py, parser.py, Phase 1)* |
-| *(name)* | *(describe contribution — e.g. unit tests Phase 2, test_simulator.py)* |
-| *(name)* | *(describe contribution — e.g. assertions Phase 3, output.py, documentation)* |
-
-> **Note:** Fill in the team member names and their actual contributions before submission.
+| Team Member | Phase 1 | Phase 2 | Phase 3 | Phase 4 |
+|---|---|---|---|---|
+| Sacara Samuel-Carlos | Implemented `models.py` (Process, Processor, SystemProcess) and the scheduling core of `simulator.py` (Round-Robin dispatch, processor affinity, system process priority) | Wrote `test_models.py` and `test_simulator.py` including the `FakeMemoryManager` mock | Added assertions in `simulator.py` (preconditions on scheduling and memory loading) | Wrote the Design and Architecture section of the documentation |
+| Cucuteanu Lucian-Andrei | Implemented `memory.py` (LRU MemoryManager) and the virtual memory part of `simulator.py` (SWAP_IN/SWAP_OUT logic, disk queue, `_start_load`) | Wrote `test_memory.py`, covering both correct behaviour and invalid input scenarios | Added assertions in `memory.py` (preconditions on `evict_lru` and `complete_load`) | Wrote the Module Descriptions and Use of Assertions sections of the documentation |
+| Dragos Gabriel-Catalin | Implemented `parser.py`, `output.py`, `gui.py` and `main.py` | Wrote `test_parser.py` and `test_output.py`, including all invalid input tests for the parser | Added assertions in `parser.py` and `output.py` (preconditions and postconditions) | Wrote the User Manual and Testing sections and assembled the final documentation |
