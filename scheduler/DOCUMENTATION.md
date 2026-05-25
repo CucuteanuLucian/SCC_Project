@@ -70,7 +70,7 @@ After every event, the scheduler first tries to dispatch any pending system call
 
 ### 2.4 Virtual Memory
 
-- The disk is a **serial resource** — only one transfer (SWAP_IN or SWAP_OUT) can happen at a time.
+- The disk is a **serial resource**, only one transfer (SWAP_IN or SWAP_OUT) can happen at a time.
 - When a process needs to run but is not in RAM, other processes are evicted using the **LRU policy** until there is enough space.
 - Eviction only picks processes that are not actively running (`RUNNING`, `SYSCALL`, or `WAITING_MEM` states are protected).
 
@@ -78,7 +78,7 @@ After every event, the scheduler first tries to dispatch any pending system call
 
 ## 3. Module Descriptions
 
-### `models.py` — Data Models
+### `models.py` - Data Models
 
 Defines the core data structures shared across all modules.
 
@@ -107,7 +107,7 @@ Represents the high-priority system process. Tracks its release period, current 
 
 ---
 
-### `parser.py` — Input Parser
+### `parser.py` - Input Parser
 
 Reads the simulation input file and constructs a `params` dictionary and a list of `Process` objects.
 
@@ -130,7 +130,7 @@ BURSTS <count> b0 [s0 b1 s1 ... bn-1]
 
 ---
 
-### `memory.py` — Memory Manager
+### `memory.py` - Memory Manager
 
 Manages RAM using the LRU replacement policy.
 
@@ -144,7 +144,7 @@ The internal `_in_memory` list is ordered from LRU (index 0) to MRU (last index)
 
 ---
 
-### `simulator.py` — Event-Driven Simulator
+### `simulator.py` - Event-Driven Simulator
 
 The core simulation engine. Initialised with `params` and a list of `Process` objects.
 
@@ -161,7 +161,7 @@ The core simulation engine. Initialised with `params` and a list of `Process` ob
 
 ---
 
-### `output.py` — Output Writer
+### `output.py` - Output Writer
 
 Produces two output files from the event log.
 
@@ -181,13 +181,13 @@ Produces two output files from the event log.
 
 ---
 
-### `gui.py` — Graphical Gantt Chart
+### `gui.py` - Graphical Gantt Chart
 
 Renders the event log as a scrollable, colour-coded Gantt chart using **tkinter** (Python standard library — the only third-party/library exception permitted by the requirements). Each processor has its own row; each process is assigned a distinct colour. System calls appear in red; memory transfers in light blue.
 
 ---
 
-### `main.py` — Entry Point
+### `main.py` - Entry Point
 
 Orchestrates the full pipeline: parse → simulate → write outputs → (optionally) show GUI.
 
@@ -285,7 +285,7 @@ In `test_simulator.py`, a `FakeMemoryManager` class replaces the real `MemoryMan
 
 ### 5.3 Test Summary
 
-**`test_models.py`** — 4 tests
+**`test_models.py`** - 4 tests
 
 | Test | What is verified |
 |---|---|
@@ -294,7 +294,7 @@ In `test_simulator.py`, a `FakeMemoryManager` class replaces the real `MemoryMan
 | `test_repr_contains_pid` | `repr()` includes the process pid |
 | `test_process_with_empty_bursts` | ⚠ Invalid input: `Process` with no bursts defaults `burst_remaining` to `0` |
 
-**`test_memory.py`** — 6 tests
+**`test_memory.py`** - 6 tests
 
 | Test | What is verified |
 |---|---|
@@ -305,7 +305,7 @@ In `test_simulator.py`, a `FakeMemoryManager` class replaces the real `MemoryMan
 | `test_complete_load_same_process_twice_doubles_ram` | ⚠ Invalid input: calling `complete_load` twice on the same object doubles RAM usage |
 | `test_touch_process_not_in_memory_is_noop` | ⚠ Invalid input: `touch()` on an unloaded process is a silent no-op |
 
-**`test_parser.py`** — 5 tests
+**`test_parser.py`** - 5 tests
 
 | Test | What is verified |
 |---|---|
@@ -315,14 +315,14 @@ In `test_simulator.py`, a `FakeMemoryManager` class replaces the real `MemoryMan
 | `test_empty_file_raises` | ⚠ Invalid input: empty file raises `AssertionError` |
 | `test_garbage_file_raises` | ⚠ Invalid input: unrecognised keywords raise `AssertionError` |
 
-**`test_output.py`** — 2 tests
+**`test_output.py`** - 2 tests
 
 | Test | What is verified |
 |---|---|
 | `test_write_text_report_contains_each_event` | Report file contains column headers and event types |
 | `test_write_gantt_produces_processor_rows` | Gantt file contains processor rows, legend, and correct symbols |
 
-**`test_simulator.py`** — 5 tests
+**`test_simulator.py`** - 5 tests
 
 | Test | What is verified |
 |---|---|
@@ -409,7 +409,7 @@ Assertions are inserted directly into the application code (not in the tests) to
 
 ### 6.6 Design Rationale
 
-Assertions serve as **executable documentation** of the contract each function expects. They allow bugs caused by incorrect inputs — such as a wrongly formatted file, a negative processor count, or a process being double-loaded into RAM — to be detected immediately at the point of failure. This is especially valuable in a simulation where a silent wrong value could propagate through many events before causing an observable error.
+Assertions serve as **executable documentation** of the contract each function expects. They allow bugs caused by incorrect inputs, such as a wrongly formatted file, a negative processor count, or a process being double-loaded into RAM, to be detected immediately at the point of failure. This is especially valuable in a simulation where a silent wrong value could propagate through many events before causing an observable error.
 
 ---
 
