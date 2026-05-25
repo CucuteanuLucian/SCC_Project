@@ -368,7 +368,7 @@ Assertions are inserted directly into the application code (not in the tests) to
 | `MemoryManager.__init__` | Precondition | `disk_transfer_rate` must be positive |
 | `touch` | Precondition | `process` must not be `None` |
 | `evict_lru` | Precondition | `_in_memory` must not be empty before eviction is attempted |
-| `evict_lru` | Invariant | `used_ram` must not go negative after an eviction |
+| `evict_lru` | Postcondition | `used_ram` must not go negative after an eviction |
 | `complete_load` | Precondition | The process's memory footprint plus current usage must not exceed total RAM |
 
 ### 6.3 `simulator.py`
@@ -417,6 +417,6 @@ Assertions serve as **executable documentation** of the contract each function e
 
 | Team Member | Phase 1 | Phase 2 | Phase 3 | Phase 4 |
 |---|---|---|---|---|
-| Sacara Samuel-Carlos | Implemented `models.py` (Process, Processor, SystemProcess) and the scheduling core of `simulator.py` (Round-Robin dispatch, processor affinity, system process priority) | Wrote `test_models.py` and `test_simulator.py` including the `FakeMemoryManager` mock | Added assertions in `simulator.py` (preconditions on scheduling and memory loading) | Wrote the Design and Architecture section of the documentation |
-| Cucuteanu Lucian-Andrei | Implemented `memory.py` (LRU MemoryManager) and the virtual memory part of `simulator.py` (SWAP_IN/SWAP_OUT logic, disk queue, `_start_load`) | Wrote `test_memory.py`, covering both correct behaviour and invalid input scenarios | Added assertions in `memory.py` (preconditions on `evict_lru` and `complete_load`) | Wrote the Module Descriptions and Use of Assertions sections of the documentation |
-| Dragos Gabriel-Catalin | Implemented `parser.py`, `output.py`, `gui.py` and `main.py` | Wrote `test_parser.py` and `test_output.py`, including all invalid input tests for the parser | Added assertions in `parser.py` and `output.py` (preconditions and postconditions) | Wrote the User Manual and Testing sections and assembled the final documentation |
+| Sacara Samuel-Carlos | Implemented `models.py` (Process, Processor, SystemProcess), `gui.py`, `main.py` and the system process part of `simulator.py` (event queue, periodic system process release, `_try_run_syscall`) | Wrote `test_models.py` and `test_simulator.py` including the `FakeMemoryManager` mock | Added assertions in `simulator.py` and `models.py` (preconditions on constructor, event queue and process fields) | Wrote the Design and Architecture section of the documentation |
+| Cucuteanu Lucian-Andrei | Implemented `memory.py` (LRU MemoryManager) and the virtual memory part of `simulator.py` (SWAP_IN/SWAP_OUT logic, disk queue, `_start_load`) | Wrote `test_memory.py`, covering both correct behaviour and invalid input scenarios | Added assertions in `memory.py` (preconditions on `evict_lru` and `complete_load`, postcondition on `used_ram`) | Wrote the Module Descriptions and Use of Assertions sections of the documentation |
+| Dragos Gabriel-Catalin | Implemented `parser.py`, `output.py` and the user scheduling part of `simulator.py` (Round-Robin dispatch, processor affinity, `_schedule`, main `run` loop) | Wrote `test_parser.py` and `test_output.py`, including all invalid input tests for the parser | Added assertions in `parser.py` and `output.py` (preconditions and postconditions) | Wrote the User Manual and Testing sections and assembled the final documentation |
